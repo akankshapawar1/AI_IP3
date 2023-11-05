@@ -35,11 +35,12 @@ def vector_add(a, b):
             raise Exception('Inputs must be in the same size!')
 
 
-def minmax_decision(state, game):
+def minmax_decision(game, state):
     """Given a state in a game, calculate the best move by searching
     forward all the way to the terminal states. [Figure 5.3]"""
 
-    player = game.to_move(state)
+    # player = game.to_move(state)
+    player = state.to_move
 
     def max_value(state):
         if game.terminal_test(state):
@@ -58,10 +59,24 @@ def minmax_decision(state, game):
         return v
 
     # Body of minmax_decision:
-    return max(game.actions(state), key=lambda a: min_value(game.result(state, a)))
+    available_actions = game.actions(state)
+    # Print the available moves before making a decision
+    print(f"Available action by Player {player}: {available_actions}")
+
+    # Find the best move along with its utility value
+    best_move, best_move_value = max(
+        ((action, min_value(game.result(state, action))) for action in available_actions),
+        key=lambda item: item[1]
+    )
+
+    # Print the selected move
+    print(f"The action by Player {player} is : {best_move}")
+
+    # Return the best action
+    return best_move
 
 
-def alpha_beta_search(state, game):
+def alpha_beta_search(game, state):
     """Search game to determine best action; use alpha-beta pruning.
     As in [Figure 5.7], this version searches all the way to the leaves."""
 
@@ -94,21 +109,46 @@ def alpha_beta_search(state, game):
     best_score = -np.inf
     beta = np.inf
     best_action = None
-    for a in game.actions(state):
+    available_actions = game.actions(state)
+
+    # Print the available moves before making a decision
+    print(f"Available action by Player {player}: {available_actions}")
+
+    for a in available_actions:
         v = min_value(game.result(state, a), best_score, beta)
         if v > best_score:
             best_score = v
             best_action = a
+
+    # Print the selected move
+    print(f"The action by Player {player} is : {best_action}")
+
+    # Return the best action
     return best_action
 
 
 def random_player(game, state):
-    """A player that chooses a legal move at random."""
-    return random.choice(game.actions(state)) if game.actions(state) else None
+    """A player that chooses a legal move at random.
+    I have edited the existing function to accommodate the expected output"""
+    available_actions = game.actions(state)
+    selected_action = random.choice(available_actions) if available_actions else None
+    current_player = state.to_move
+
+    # Print the available moves
+    print(f"Available Action by Player {current_player}: {available_actions}")
+
+    # Print the move selected by player
+    if selected_action is not None:
+        print(f"The action by the Player {current_player} is : {selected_action}")
+    else:
+        print("No available moves for the random player.")
+
+    return selected_action
+    # return random.choice(game.actions(state)) if game.actions(state) else None
 
 
 # Heuristic alpha-beta search
-def alpha_beta_cutoff_search(state, game, d=4, cutoff_test=None, eval_fn=None):
+def alpha_beta_cutoff_search(game, state, d=4, cutoff_test=None, eval_fn=None):
     """Search game to determine best action; use alpha-beta pruning.
     This version cuts off search and uses an evaluation function."""
 
@@ -144,15 +184,26 @@ def alpha_beta_cutoff_search(state, game, d=4, cutoff_test=None, eval_fn=None):
     best_score = -np.inf
     beta = np.inf
     best_action = None
-    for a in game.actions(state):
+    available_actions = game.actions(state)
+
+    # Print the available moves before making a decision
+    print(f"Available action by Player {player}: {available_actions}")
+
+    for a in available_actions:
         v = min_value(game.result(state, a), best_score, beta, 1)
         if v > best_score:
             best_score = v
             best_action = a
+
+    # Print the selected move
+    print(f"The action by Player {player} is : {best_action}")
+
+    # Return the best action
     return best_action
 
 
-def monte_carlo_tree_search(state, game, N=1000):
+def monte_carlo_tree_search(game, state, N=1000):
+    player = game.to_move(state)
     def select(n):
         """select a leaf node in the tree"""
         if n.children:
@@ -196,6 +247,13 @@ def monte_carlo_tree_search(state, game, N=1000):
 
     max_state = max(root.children, key=lambda p: p.N)
 
+    # Retrieve the best action and the associated state
+    best_action = root.children[max_state]
+    # Print the best action and the available actions from the original state
+    available_actions = game.actions(state)
+    print(f"Final decision available actions for Monte Carlo Player {player}: {available_actions}")
+    print(f"The action by the player {player}: {best_action}")
+
     return root.children.get(max_state)
 
 
@@ -216,40 +274,6 @@ def query_player(game, state):
         print('no legal moves: passing turn to next player')
     return move
 
-
-'''class Game:
-
-    def __init__(self):
-        self.initial = None
-        self.current_state = None
-
-    def to_move(self, state):
-        """Returns the player whose move it is in this state."""
-        return state.to_move
-
-    def play_game(self, *players):
-        """Play an n-person, move-alternating game."""
-        state = self.initial
-        while True:
-            for player in players:
-                move = player(state)
-                state = self.result(state, move)
-                if self.terminal_test(state):
-                    self.display(state)
-                    return self.utility(state, self.to_move(self.initial))
-
-    def utility(self, state, param):
-        raise NotImplementedError
-
-    def terminal_test(self, state):
-        raise NotImplementedError
-
-    def display(self, state):
-        raise NotImplementedError
-
-    def result(self, state, move):
-        raise NotImplementedError
-'''
 
 class Game:
     """A game is similar to a problem, but it has a utility for each
@@ -291,19 +315,6 @@ class Game:
     def __repr__(self):
         return '<{}>'.format(self.__class__.__name__)
 
-    '''def play_game(self, *players):
-        """Play an n-person, move-alternating game."""
-        state = self.initial
-        while True:
-            for player in players:
-                move = player(self, state)
-                state = self.result(state, move)
-                if self.terminal_test(state):
-                    self.display(state)
-                    # print('utility')
-                    # print(self.utility(state, self.to_move(self.initial)))
-                    return self.utility(state, self.to_move(self.initial))'''
-
     def play_game(self, *players):
         """Play an n-person, move-alternating game."""
         state = self.initial
@@ -313,14 +324,12 @@ class Game:
                 state = self.result(state, move)
                 self.display(state)
 
-                # Determine the player's symbol ('X' or 'O')
+                # First player would be X, second player would be O
                 player_symbol = 'O' if player == players[1] else 'X'
                 # Print the utility for the player who just made the move
-                print(f"Player {player_symbol}'s Utility: {state.utility if player_symbol == 'X' else -state.utility}")
+                print(f"Player {player_symbol}'s Utility: {state.utility if player_symbol == 'X' else -state.utility}\n")
 
                 if self.terminal_test(state):
-                    # The game is over, so print the final utilities
-                    # print(f"Final Utilities: Player X: {state.utility}, Player O: {-state.utility}")
                     return state.utility
 
 
